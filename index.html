@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מחשבון חניון מלונות</title>
+    <title>מחשבון חניון - גרסה סופית</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -12,8 +11,9 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            padding: 20px;
         }
         .calculator-card {
             background: white;
@@ -21,7 +21,7 @@
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 450px;
+            max-width: 480px;
         }
         h2 {
             text-align: center;
@@ -29,7 +29,7 @@
             margin-bottom: 25px;
         }
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         label {
             display: block;
@@ -45,9 +45,15 @@
             font-size: 16px;
             box-sizing: border-box;
         }
-        input:disabled {
-            background-color: #f9f9f9;
-            color: #666;
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            font-size: 0.95em;
+        }
+        .checkbox-group input {
+            width: auto;
         }
         .result-box {
             margin-top: 25px;
@@ -58,7 +64,7 @@
             display: none;
         }
         .total-price {
-            font-size: 1.25em;
+            font-size: 1.4em;
             font-weight: bold;
             color: #d93025;
         }
@@ -69,18 +75,34 @@
             line-height: 1.4;
             border-top: 1px solid #eee;
             padding-top: 10px;
+            margin-bottom: 15px;
+        }
+        .pay-button {
+            width: 100%;
+            padding: 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .pay-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
 
 <div class="calculator-card">
-    <h2>מחשבון עלות חנייה בחניון האופרה</h2>
+    <h2>מחשבון חנייה ותשלום</h2>
     
     <div class="form-group">
         <label for="hotelSelect">בחר מלון:</label>
-        <select id="hotelSelect" onchange="calculateTotal()">
-            <!-- נתונים מהמקורות: שם מלון ומחיר -->
+        <select id="hotelSelect" onchange="calculate()">
             <option value="100">מלון דה הרברט (100 ₪)</option>
             <option value="110">מלון אופרה (110 ₪)</option>
             <option value="120">מלון פאלאס (120 ₪)</option>
@@ -88,65 +110,73 @@
     </div>
 
     <div class="form-group">
-        <label for="entryDateTime">תאריך ושעת כניסה:</label>
-        <input type="datetime-local" id="entryDateTime" onchange="syncTimes()">
+        <label for="entryDateTime">תאריך ושעת כניסה :</label>
+        <input type="datetime-local" id="entryDateTime" step="900" onchange="calculate()">
     </div>
 
     <div class="form-group">
-        <label for="exitDate">תאריך יציאה:</label>
-        <input type="date" id="exitDate" onchange="calculateTotal()">
+        <label for="exitDate">תאריך יציאה :</label>
+        <input type="date" id="exitDate" onchange="calculate()">
     </div>
 
     <div class="form-group">
-        <label>שעת יציאה (לפי שעת כניסה):</label>
-        <input type="text" id="exitTimeDisplay" disabled placeholder="תופיע לאחר בחירת כניסה">
+        <label for="customerName">שם הלקוח:</label>
+        <input type="text" id="customerName" placeholder="הזן שם מלא">
+    </div>
+
+    <div class="form-group">
+        <label for="carNumber">מספר רכב:</label>
+        <input type="number" id="carNumber" placeholder="הזן מספר רכב">
+    </div>
+
+    <div class="checkbox-group">
+        <input type="checkbox" id="termsCheck" onchange="toggleBtn()">
+        <label for="termsCheck">
+            לאישור 
+            <a href="https://www.greenparking.co.il/%D7%AA%D7%A0%D7%90%D7%99-%D7%A9%D7%99%D7%9M%D7%95%D7%A9-green-parking/" target="_blank">תנאי החנייה</a>
+        </label>
     </div>
 
     <div id="resultArea" class="result-box">
-        <div>סה"כ לתשלום: <span class="total-price" id="finalSum">0</span> ₪</div>
+        <div id="summaryDisplay" style="margin-bottom:10px;"></div>
+        <div>סה"כ לתשלום: <span class="total-price" id="totalVal">0</span> ₪</div>
         <div class="warning-note">
-            המחיר מחושב לפי שעת הכניסה (לכל 24 שעות) במידה ותצאו מעבר לשעת הכניסה לחניון תחויבו בההפרש לפי מחירון החניון.
+            המחיר מחושב לפי הכניסה לחניון (לכל 24 שעות מרגע שעת הכניסה לחניון) במידה ותצאו מעבר לשעת הכניסה לחניון תחויבו על ההפרש לפי מחירון החניון
         </div>
+        <button class="pay-button" id="payBtn" disabled onclick="alert('עובר ל-UPAY...')">לתשלום באשראי</button>
     </div>
 </div>
 
 <script>
-    function syncTimes() {
-        const entryVal = document.getElementById('entryDateTime').value;
-        if (entryVal) {
-            const entryDate = new Date(entryVal);
-            const hours = entryDate.getHours().toString().padStart(2, '0');
-            const minutes = entryDate.getMinutes().toString().padStart(2, '0');
-            document.getElementById('exitTimeDisplay').value = hours + ":" + minutes;
-            calculateTotal();
-        }
-    }
+    function calculate() {
+        const price = parseInt(document.getElementById('hotelSelect').value);
+        const entry = document.getElementById('entryDateTime').value;
+        const exitD = document.getElementById('exitDate').value;
 
-    function calculateTotal() {
-        const pricePerDay = parseInt(document.getElementById('hotelSelect').value);
-        const entryVal = document.getElementById('entryDateTime').value;
-        const exitDateOnly = document.getElementById('exitDate').value;
+        if (entry && exitD) {
+            const entryDate = new Date(entry);
+            const exitDate = new Date(exitD);
+            exitDate.setHours(entryDate.getHours(), entryDate.getMinutes());
 
-        if (entryVal && exitDateOnly) {
-            const entryDate = new Date(entryVal);
-            const exitDate = new Date(exitDateOnly);
-            
-            // הגדרת שעת היציאה להיות בדיוק כמו שעת הכניסה לחישוב ימים עגולים
-            exitDate.setHours(entryDate.getHours());
-            exitDate.setMinutes(entryDate.getMinutes());
-
-            const diffInMs = exitDate.getTime() - entryDate.getTime();
-            const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
-
-            if (diffInDays > 0) {
-                // חישוב ימים כפול המחיר מהמקורות
-                const total = Math.ceil(diffInDays) * pricePerDay;
-                document.getElementById('finalSum').innerText = total.toLocaleString();
+            const diff = (exitDate - entryDate) / (1000 * 60 * 60 * 24);
+            if (diff > 0) {
+                const total = Math.ceil(diff) * price;
+                const timeStr = entryDate.getHours().toString().padStart(2,'0') + ":" + entryDate.getMinutes().toString().padStart(2,'0');
+                
+                document.getElementById('summaryDisplay').innerHTML = `<strong>יציאה:</strong> ${exitDate.toLocaleDateString('he-IL')} בשעה ${timeStr}`;
+                document.getElementById('totalVal').innerText = total.toLocaleString();
                 document.getElementById('resultArea').style.display = 'block';
+                toggleBtn();
             } else {
                 document.getElementById('resultArea').style.display = 'none';
             }
         }
+    }
+
+    function toggleBtn() {
+        const checked = document.getElementById('termsCheck').checked;
+        const visible = document.getElementById('resultArea').style.display === 'block';
+        document.getElementById('payBtn').disabled = !(checked && visible);
     }
 </script>
 
